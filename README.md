@@ -3,7 +3,8 @@
 This is a Tool that will help me continually update power rankings and track
 the value that players are adding as we go through the season. Both rankings
 and player trackers will take into account the box scores of every game of the
-season and will be described below.
+season and will be described below. All files will write to the same output
+file with the file including the last analyzed game.
 
 REGULAR SEASON POWER RANKINGS TRACKER
 The regular season tracker will work in the following way. There will be a

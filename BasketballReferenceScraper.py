@@ -2,7 +2,7 @@ from bs4 import BeautifulSoup
 import requests
 import string
 import time
-from GoatCalculations import *
+from UpdateFunctions import *
 
 # The player lists help iteratively build the player base, and narrows it down over each iteration.
 # the Player Name List is just a tool to insure that we don't have repeats, and is just a quicker way to

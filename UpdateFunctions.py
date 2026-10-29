@@ -1,10 +1,7 @@
 from Player import *
+from Team import *
 import math
 
-# Player Lists listed here to be utilized globally
-PlayerList1 = list()
-PlayerList2 = list()
-PlayerList3 = list()
 
 # This is the function that is called once we have the data pulled.
 def RunFinalCalculations():
@@ -19,7 +16,6 @@ def RunFinalCalculations():
     # Need to just sort by greatness Stat than print it out
     finalPlayerSet = SortByGreatness(mathPlayerSet)
     PrintList(finalPlayerSet)
-    
 
 # Could be refactored if I cared more, but just the function that gets a rough idea for the top 100 players
 def RunningScoreCalc(inputPlayer):
