@@ -10,6 +10,7 @@ class Player:
     
     # Each of the stats that we track, plus name, a running score for when pulling the data on 100
     # players, and the final Greatness Score.
+    PlayerName = ""
     ValueScore = 0
     Team = ''
     

@@ -10,12 +10,9 @@ from UpdateFunctions import *
 playerNameList = list()
 
 # Main function used when collecting information from basketball reference
-def PullData():
+def PullData(teamListlastUpdate):
 
-    global PlayerList1, PlayerList2, PlayerList3
-    indexCounter = 0
-    # Grabs the all_star nominations, mvps and chips if they have more than 3.
-    GetList1()
+    GetStarterPoint(teamListlastUpdate[1])
     #FilterPlayerList narrows down the amount Players that are eligible for promotion to next round
     PlayerList1 = FilterPlayerList(9, 300, PlayerList1)
     # Grabs everything but careerPER, Chips, and StatTitles
@@ -32,18 +29,14 @@ def PullData():
     return
     
 
-def GetList1():
-    #finding players with 3+ chips
-    html_text = requests.get('https://www.basketball-reference.com/leaders/most_championships.html').text
-    FindPlayersWithAtLeast3Chips(html_text)
+def GetStarterPoint(lastUpdate):
+    # Getting to the point of the last Update.
+    dateInput = lastUpdate.split('/')
+    dateInput[2] = dateInput[2].strip("\n")
+    link = "https://www.basketball-reference.com/boxscores/?month="+dateInput[0]+"&day="+dateInput[1]+"&year="+dateInput[2]
+    html_text = requests.get(link).text
+    findBoxScores(html_text)
 
-    # Next we need to add all players with 3 or more All-star games
-    html_text = requests.get('https://www.basketball-reference.com/awards/all_star_by_player.html').text
-    FindPlayersAllStarSelections(html_text)
-
-    #Filter past the Bill Walton problem, by adding MVPs
-    html_text = requests.get('https://www.basketball-reference.com/awards/mvp.html').text
-    FindPlayersMVPs(html_text)
 
 
 # Refines the existing list and tries to get it under 150 players
@@ -95,10 +88,11 @@ def GetList3():
         
         
 # Table that is easily accessed that allows us to see all players with more than 3 championships.
-def FindPlayersWithAtLeast3Chips(html_text):
+def findBoxScores(html_text):
     tempPlayerName = ''
+    # 'lxml'
     soup = BeautifulSoup(html_text, 'lxml')
-    groupOfPlayers = soup.find('tbody')
+    gameSummaries = soup.find_all('div', class_= 'game_summaries')
     # Cycles through every player in the list and uses temp variables to store information to
     # PlayerList1
     # currently storing all hall of famers with the * next to them
@@ -118,7 +112,7 @@ def FindPlayersWithAtLeast3Chips(html_text):
 # specific pages.
 def FindPlayersAllStarSelections(html_text):
     tempPlayer = Player()
-    soup = BeautifulSoup(html_text, 'lxml')
+    soup = BeautifulSoup(html_text, 'html.lxml')
     tableOfPlayers = soup.find('table')
     bodyOfPlayers = tableOfPlayers.find('tbody')
     for everyPlayer in bodyOfPlayers.find_all('tr'):
