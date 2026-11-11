@@ -2,7 +2,11 @@ from bs4 import BeautifulSoup
 import requests
 import string
 import time
+from datetime import datetime
 from UpdateFunctions import *
+from BoxScore import *
+from Player import *
+from Team import *
 
 # The player lists help iteratively build the player base, and narrows it down over each iteration.
 # the Player Name List is just a tool to insure that we don't have repeats, and is just a quicker way to
@@ -11,21 +15,12 @@ playerNameList = list()
 
 # Main function used when collecting information from basketball reference
 def PullData(teamListlastUpdate):
-
+    currentDate = datetime.now()
+    currentDate = (currentDate.month,currentDate.day, currentDate.year)
+    
     GetStarterPoint(teamListlastUpdate[1])
     #FilterPlayerList narrows down the amount Players that are eligible for promotion to next round
-    PlayerList1 = FilterPlayerList(9, 300, PlayerList1)
-    # Grabs everything but careerPER, Chips, and StatTitles
-    InitializePlayerList2()
-    GetList2()
-    PlayerList2 = FilterPlayerList(18, 150, PlayerList2)
-    # Final iteration, everything is grabbed here.
-    InitializePlayerList3()
-    GetList3()
-    PlayerList3 = FilterPlayerList(36, 100, PlayerList3)
-
-    # Create function here to create a txt file for player storage.
-    CreateTxtFileForFinalPlayerList()
+   
     return
     
 
@@ -36,31 +31,6 @@ def GetStarterPoint(lastUpdate):
     link = "https://www.basketball-reference.com/boxscores/?month="+dateInput[0]+"&day="+dateInput[1]+"&year="+dateInput[2]
     html_text = requests.get(link).text
     findBoxScores(html_text)
-
-
-
-# Refines the existing list and tries to get it under 150 players
-# Takes into account all catagories except for cPER and total Championships
-def GetList2():
-    # Each html request just gets it's appropriate stat. Unfortunately because of the way basketball
-    # reference is set up it is difficult to refactor this into neater code.
-    html_text = requests.get('https://www.basketball-reference.com/awards/all_star_mvp.html').text
-    FindPlayerAllStarMVPs(html_text)
-
-    html_text = requests.get('https://www.basketball-reference.com/awards/dpoy.html').text
-    FindPlayersDPOY(html_text)
-
-    html_text = requests.get('https://www.basketball-reference.com/awards/roy.html').text
-    FindPlayersROY(html_text)
-
-    html_text = requests.get('https://www.basketball-reference.com/awards/finals_mvp.html').text
-    FindPlayersFinalsMVP(html_text)
-
-    html_text = requests.get('https://www.basketball-reference.com/awards/all_league.html').text
-    FindPlayersAllNBA(html_text)
-
-    html_text = requests.get('https://www.basketball-reference.com/awards/all_defense.html').text
-    FindPlayersAllDefense(html_text)
 
 
 def GetList3():
@@ -89,32 +59,49 @@ def GetList3():
         
 # Table that is easily accessed that allows us to see all players with more than 3 championships.
 def findBoxScores(html_text):
-    tempPlayerName = ''
-    # 'lxml'
+    retBSList = list()
     soup = BeautifulSoup(html_text, 'lxml')
     gameSummaries = soup.find_all('div', class_= 'game_summaries')
-    # Cycles through every player in the list and uses temp variables to store information to
-    # PlayerList1
-    # currently storing all hall of famers with the * next to them
-    for everyPlayer in groupOfPlayers.find_all('td'):
-        if everyPlayer.get('data-stat') == 'player':
-            tempPlayerName = everyPlayer.get_text()
-            tempPlayerName = CleanPlayerName(tempPlayerName)
-            playerNameList.append(tempPlayerName)
-        elif everyPlayer.get('data-stat') == 'champ_count':
-            tempPlayer = Player()
-            tempPlayer.name = tempPlayerName
-            tempPlayer.championships = everyPlayer.get_text()
-            PlayerList1.append(tempPlayer)
+    # Cycles through every game to find all the details we need
+    for everyGame in gameSummaries:
+        tempBoxScore = BoxScore()
+        # if everyGame.get('data-stat') == 'player':
+        trLoser = everyGame.find('tr', class_='loser')
+        tempBoxScore.loser = trLoser.find('a').get_text()
+        trWinner = everyGame.find('tr', class_='winner')
+        tempBoxScore.winner = trWinner.find('a').get_text()
+        link = everyGame.find_all('a')
+        url = link[1].get('href')
+        urlComplete = requests.get('https://www.basketball-reference.com'+url).text
+        players = openBoxScores(urlComplete, tempBoxScore.winner, tempBoxScore.loser)
+        tempBoxScore.ImpactPlayerList = players
+        retBSList.append(tempBoxScore)
+    return retBSList
+        
+        
     
 # All of the Find functions function similarly to the FindPlayersWithAtLeast3Chips function.
 # Will note if something is dramatically different. The only differences are ways to navigate the
 # specific pages.
-def FindPlayersAllStarSelections(html_text):
+def openBoxScores(html_text, winner, loser):
+    listOfImpactedPlayers = list()
     tempPlayer = Player()
-    soup = BeautifulSoup(html_text, 'html.lxml')
-    tableOfPlayers = soup.find('table')
-    bodyOfPlayers = tableOfPlayers.find('tbody')
+    soup = BeautifulSoup(html_text, 'lxml')
+    Teams = soup.find_all('div',class_='scorebox_team')
+    TempTeams = list()
+    for eachTeam in Teams:
+        tempTeam = Team()
+        # Still need to adjust team weight lol
+        # winnerLen = winner.split(' ').len()
+        # if winner.split(' ', winnerLen)==tempTeam.teamName:
+        tempTeam.teamName = eachTeam.find_all('a')[2].text
+        tempTeam.teamScore = eachTeam.find('div',class_='score').get_text()
+        TempTeams.append(tempTeam)
+    
+
+
+    boxTable = soup.find('table')
+    bodyOfPlayers = boxTable.find('tbody')
     for everyPlayer in bodyOfPlayers.find_all('tr'):
         tempPlayer = IndexAllStarSelectionNameAndNumber(everyPlayer)
         if tempPlayer.name not in playerNameList:
@@ -125,6 +112,7 @@ def FindPlayersAllStarSelections(html_text):
                 if each.name == tempPlayer.name:
                     each.all_stars = tempPlayer.all_stars
                     break
+    return listOfImpactedPlayers
     
 
 def FindPlayersMVPs(html_text):
@@ -447,17 +435,3 @@ def EnsureUrlIsCorrect(builtURL, tempName):
         tempPlayer = EnsureUrlIsCorrect(builtURL, tempName)
 
     return tempPlayer
-
-
-def CreateTxtFileForFinalPlayerList():
-    top100File = open("PlayerInfo.txt", "w")
-    # where the actual creation of text file goes.
-    for eachPlayer in PlayerList3:
-        # Creating possibilities for problems with forign lettering when transcribing it to text file
-        tempName = eachPlayer.name
-        tempName = 'c'.join(tempName.split("Ä\x87"))
-        tempName = 'c'.join(tempName.split("Ä\x8d"))
-        tempName = 'o'.join(tempName.split("Ã³"))
-        print(tempName, eachPlayer.all_stars, eachPlayer.championships, eachPlayer.mvp, eachPlayer.dpoy, eachPlayer.roy, eachPlayer.asmvp, eachPlayer.finalMVP, eachPlayer.allNBA, eachPlayer.allDef, eachPlayer.statTitles, eachPlayer.careerPER, sep = ",", file = top100File)
-    top100File.close()
-    return

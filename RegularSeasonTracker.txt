@@ -1,4 +1,4 @@
-10/19/2026
+10/20/2026
 1 Oklahoma City	N weight: 27	Score: 1.5
 2 San Antonio	N weight: 27	Score: 1.5
 3 Minnesota	N weight: 27	Score: 1.4
